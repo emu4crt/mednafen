@@ -473,7 +473,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 	  // SLK - Approximation to prevent SaveState snapshot corruption
 	  if(use_super_resolution)
 	  {
-	    neowidth = resolution_to_change_w;
+	    neowidth = current_game_resolution_h;
 	    neoheight = DisplayRect->h;
 	  }
 	  // SLK - end
@@ -546,7 +546,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 	   }
 	  }
 
-          st->write((uint8*)dest_surface.pixels, 3 * neowidth * neoheight);
+   st->write((uint8*)dest_surface.pixels, 3 * neowidth * neoheight);
 	 }
 
 	 MDFN_StateAction(&sm, 0, data_only);

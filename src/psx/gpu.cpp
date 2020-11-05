@@ -84,6 +84,7 @@ int res_change_count;
 
 void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global variables used in MAIN & VIDEO
 {
+  printf("PSX - gpu - GPU_NewDisplayMode: %d\n",V);
   // GP1(08h) - Display mode
   //   0-1   Horizontal Resolution 1     (0=256, 1=320, 2=512, 3=640) ;GPUSTAT.17-18
   //   2     Vertical Resolution         (0=240, 1=480, when Bit5=1)  ;GPUSTAT.19
@@ -195,9 +196,9 @@ void GPU_Init(bool pal_clock_and_tv)
   //SLK
   resolution_to_change_w = 640;
   resolution_to_change_h = 480;
-  resolution_to_change_vfreq = 50; // TODO: need a better value
+  resolution_to_change_vfreq = 59.94; 
   resolution_to_change = true;
-  printf("PSX - GPU Init - NTSC mode - resolution set to: %dx%d\n",resolution_to_change_w,resolution_to_change_h);
+  printf("PSX - GPU Init - NTSC mode - resolution set to: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
   
  }
  else	// PAL clock
@@ -208,9 +209,9 @@ void GPU_Init(bool pal_clock_and_tv)
   //SLK
   resolution_to_change_w = 640;
   resolution_to_change_h = 576;
-  resolution_to_change_vfreq = 59.94;
+  resolution_to_change_vfreq = 50;// TODO: more accurate value ???
   resolution_to_change = true;
-  printf("PSX - GPU Init - PAL mode - resolution set to: %dx%d\n",resolution_to_change_w,resolution_to_change_h);
+  printf("PSX - GPU Init - PAL mode - resolution set to: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
   
  }
 
@@ -1000,7 +1001,7 @@ MDFN_FASTCALL void GPU_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32
 	break;
 
    case 0x08:
-	//printf("\n\nDISPLAYMODE SET: 0x%02x, %u *************************\n\n\n", V & 0xFF, scanline);
+	// printf("PSX - GPU - DISPLAYMODE SET: 0x%02x, %u *************************\n\n\n", V & 0xFF, scanline);
 	DisplayMode = V & 0xFF;
 	if(PreviousDisplayMode != DisplayMode) // SLK - Trap GPU resolution change
 	{

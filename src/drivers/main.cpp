@@ -125,7 +125,6 @@ static const MDFNSetting_EnumList FontSize_List[] =
  { NULL, 0 },
 };
 
-
 static const MDFNSetting_EnumList FPSPos_List[] =
 {
  { "upper_left", 0, gettext_noop("Upper left.") },
@@ -133,6 +132,32 @@ static const MDFNSetting_EnumList FPSPos_List[] =
 
  { NULL, 0 },
 };
+
+
+// SLK
+enum
+{
+ RES_STATIC = 0,
+ RES_NATIVE = 1,
+ RES_SUPER = 2,
+ RES_SWITCHRES = 3,
+	RES_SWITCHRES_SUPER = 4
+};
+// SLK - end
+
+// SLK - custom setting
+static const MDFNSetting_EnumList ResolutionSwitch_List[] =
+{
+ // Legacy:
+ { "0", RES_STATIC},
+ { "native", RES_NATIVE, "Native resolutions", gettext_noop("Use emulated system native resolution for output") },
+ { "super", RES_SUPER, "Super resolutions", gettext_noop("Use super resolutions for output") },
+ { "switchres", RES_SWITCHRES, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output resolution") },
+	{ "switchres_super", RES_SWITCHRES_SUPER, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output super resolution (2560xY)") },
+ { NULL, 0 },
+};
+// SLK - end
+
 
 static std::vector <MDFNSetting> NeoDriverSettings;
 static const MDFNSetting DriverSettings[] =
@@ -154,6 +179,8 @@ static const MDFNSetting DriverSettings[] =
   { "video.blit_timesync", MDFNSF_NOFLAGS, gettext_noop("Enable time synchronization(waiting) for frame blitting."),
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
+  	
+		{ "video.resolution_switch", MDFNSF_NOFLAGS, gettext_noop("In-game video resolution switch (0, native, super, switchres or switchres_super)."), NULL, MDFNST_ENUM, "0", NULL, NULL, NULL, NULL, ResolutionSwitch_List },
 
   { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "0.25", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
@@ -1082,7 +1109,7 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 
 static volatile unsigned NeedVideoSync = 0;
 //SLK
-static volatile unsigned NeedResolutionChange = 0;  // trigger to switch window/fullscreen resolution
+static volatile unsigned NeedResolutionChange = 0; // trigger to switch window size of fullscreen resolution
 //SLK end
 
 static int GameLoop(void *arg);
@@ -1236,11 +1263,11 @@ int CloseGame(void)
 	 GameThread = NULL;
 	}
 
-        if(qtrecfn)	// Needs to be before MDFNI_Closegame() for now
-         MDFNI_StopAVRecord();
+	if(qtrecfn)	// Needs to be before MDFNI_Closegame() for now
+  MDFNI_StopAVRecord();
 
-        if(soundrecfn)
-         MDFNI_StopWAVRecord();
+ if(soundrecfn)
+  MDFNI_StopWAVRecord();
 
 	if(MDFN_GetSettingB("autosave") && !autosave_load_error)
 	 MDFNI_SaveState(NULL, "mca", NULL, NULL, NULL);
@@ -1316,91 +1343,59 @@ void DebuggerFudge(void)
 
 static int GameLoop(void *arg)
 {
-	while(GameThreadRun)
-	{
-	  //SLK - trap change resolution request
-	  if(resolution_to_change)
-	  {
-		printf("MAIN - GameLoop - Game resolution change to %dx%d, current game resolution: %dx%d\n",resolution_to_change_w,resolution_to_change_h, current_game_resolution_w, current_game_resolution_h);
-		if(use_native_resolution)
-	    {
-			if((current_game_resolution_w != resolution_to_change_w) || (current_game_resolution_h != resolution_to_change_h))
-			{
-				printf("MAIN - GameLoop - native resolution to switch: %dx%d\n",resolution_to_change_w,resolution_to_change_h);
-				NeedResolutionChange++;
-			}
-			else {printf("MAIN - GameLoop - resolution change bypassed\n");}
-		}
-	    if(use_super_resolution)
-	    {
-	      if(current_game_resolution_h != resolution_to_change_h)
-	      {
-				resolution_to_change_w = 2560;
-				printf("MAIN - GameLoop - Super resolution to switch: 2560 x %d\n", resolution_to_change_h);
-				NeedResolutionChange++;
-	      }
-	      else {printf("MAIN - GameLoop - Super resolution change bypassed\n");}
-		}
-		if(use_switchres)
-	    {
-			if((current_game_resolution_w != resolution_to_change_w) || (current_game_resolution_h != resolution_to_change_h))
-			{
-				printf("MAIN - GameLoop - Switchres to switch : %dx%d\n",resolution_to_change_w,resolution_to_change_h);
-				NeedResolutionChange++;
-			}
-			else {printf("MAIN - GameLoop - resolution change bypassed\n");}
-		}
-		resolution_to_change = false;
-	  }
-	  // SLK - end
-		
-	  int16 *sound;
-	  int32 ssize;
-	  bool fskip;
+ while(GameThreadRun)
+ {
+  //SLK - trap change resolution request
+  if(resolution_to_change)
+  {
+   printf("MAIN - GameLoop - Game resolution mode is now: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+   NeedResolutionChange++;
+ 	 resolution_to_change = false;
+	 }
+	 // SLK - end
+	 
+		int16 *sound;
+	 int32 ssize;
+	 bool fskip;
 	
-	 /* If we requested a new video mode, wait until it's set before calling the emulation code again.
-	 */
+	 while(NeedVideoSync)
+	 {
+		 if(!GameThreadRun) return(1);	// Might happen if video initialization failed
+		 	Time::SleepMS(2);
+	 }
+	 if(Sound_NeedReInit())
+	 	GT_ReinitSound();
 
-	//SLK
-	while(NeedVideoSync)
-	//SLK
-	{
-		if(!GameThreadRun) return(1);	// Might happen if video initialization failed
-	  	Time::SleepMS(2);
-	}
-	if(Sound_NeedReInit())
-		GT_ReinitSound();
+	 if(MDFNDnetplay && !(NoWaiting & 0x2))	// TODO: Hacky, clean up.
+	 	ers.SetETtoRT();
+ 	//
+ 	//
+	 fskip = ers.NeedFrameSkip();
+	 fskip &= MDFN_GetSettingB("video.frameskip");
+	 fskip &= !(pending_ssnapshot || pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance);
+	 fskip |= (bool)NoWaiting;
 
-	if(MDFNDnetplay && !(NoWaiting & 0x2))	// TODO: Hacky, clean up.
-		ers.SetETtoRT();
-	//
-	//
-	fskip = ers.NeedFrameSkip();
-	fskip &= MDFN_GetSettingB("video.frameskip");
-	fskip &= !(pending_ssnapshot || pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance);
-	fskip |= (bool)NoWaiting;
+	 //printf("fskip %d; NeedFrameAdvance=%d\n", fskip, NeedFrameAdvance);
 
-	//printf("fskip %d; NeedFrameAdvance=%d\n", fskip, NeedFrameAdvance);
+	 NeedFrameAdvance = false;
+	 //
+	 //
+	 SoftFB[SoftFB_BackBuffer].lw[0] = ~0;
 
-	NeedFrameAdvance = false;
-	//
-	//
-	SoftFB[SoftFB_BackBuffer].lw[0] = ~0;
+	 //
+	 //
+	 //
+	 EmulateSpecStruct espec;
 
-	//
-	//
-	//
-	EmulateSpecStruct espec;
+	 espec.surface = SoftFB[SoftFB_BackBuffer].surface.get();
+	 espec.LineWidths = SoftFB[SoftFB_BackBuffer].lw.get();
+	 espec.skip = fskip;
+	 espec.soundmultiplier = CurGameSpeed;
+	 espec.NeedRewind = DNeedRewind;
 
-	espec.surface = SoftFB[SoftFB_BackBuffer].surface.get();
-	espec.LineWidths = SoftFB[SoftFB_BackBuffer].lw.get();
-	espec.skip = fskip;
-	espec.soundmultiplier = CurGameSpeed;
-	espec.NeedRewind = DNeedRewind;
-
-	espec.SoundRate = Sound_GetRate();
-	espec.SoundBuf = Sound_GetEmuModBuffer(&espec.SoundBufMaxSize);
-	espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
+	 espec.SoundRate = Sound_GetRate();
+	 espec.SoundBuf = Sound_GetEmuModBuffer(&espec.SoundBufMaxSize);
+	 espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
 
 	if(MDFN_UNLIKELY(StateRCTest))
 	{
@@ -1510,10 +1505,10 @@ static int GameLoop(void *arg)
 	   }
 	  } while(((InFrameAdvance && !NeedFrameAdvance) || GameLoopPaused) && GameThreadRun);
 	  SoftFB_BackBuffer ^= do_flip;
-	 }
-	}
+  }
+ }
 
-	return(1);
+ return(1);
 }   
 
 
@@ -2277,17 +2272,17 @@ int main(int argc, char *argv[])
 	MDFNI_printf(_("Starting Mednafen %s\n"), MEDNAFEN_VERSION);
 	MDFN_indent(1);
 
-        MDFN_printf(_("Build information:\n"));
-        MDFN_indent(2);
-        PrintCompilerVersion();
-	//PrintGLIBCXXInfo();
-        PrintZLIBVersion();
-	PrintLIBICONVVersion();
-        PrintSDLVersion();
-        PrintLIBSNDFILEVersion();
-        MDFN_indent(-2);
+MDFN_printf(_("Build information:\n"));
+MDFN_indent(2);
+PrintCompilerVersion();
+//PrintGLIBCXXInfo();
+PrintZLIBVersion();
+PrintLIBICONVVersion();
+PrintSDLVersion();
+PrintLIBSNDFILEVersion();
+MDFN_indent(-2);
 
-        MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
+MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
 
 	#ifdef WIN32
 	// Call to CoInitializeEx() must come before SDL_Init()
@@ -2395,6 +2390,16 @@ int main(int argc, char *argv[])
 	 return -1;
 	}
 
+
+	//MDFN_Notify(MDFN_NOTICE_ERROR, _("Get video.resolution_switch\n"));
+ resolution_switch_setting = MDFN_GetSettingI("video.resolution_switch");
+ printf("MAIN - SETTINGS - video.resolution: %d\n",resolution_switch_setting);
+	if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_SWITCHRES_SUPER)
+	{
+	 printf("SWITCHRES ON\n");
+		Video_SwitchResInit(); // SLK
+	}
+
 	InstallSignalHandlers();
 	//
 	//
@@ -2463,8 +2468,8 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	 uint32 pitch32 = CurGame->fb_width; 
 	 MDFN_PixelFormat nf(MDFN_COLORSPACE_RGB, 0, 8, 16, 24);
 
-         for(int i = 0; i < 2; i++)
-	 {
+  for(int i = 0; i < 2; i++)
+  {
 	  SoftFB[i].surface.reset(new MDFN_Surface(NULL, CurGame->fb_width, CurGame->fb_height, pitch32, nf));
 	  SoftFB[i].lw.reset(new int32[CurGame->fb_height]);
 	  memset(SoftFB[i].lw.get(), 0, sizeof(int32) * CurGame->fb_height);
@@ -2479,7 +2484,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	  SoftFB[i].lw[0] = ~0;
 	 }
 
-         FPS_Init(MDFN_GetSettingUI("fps.position"), MDFN_GetSettingUI("fps.scale"), MDFN_GetSettingUI("fps.font"), MDFN_GetSettingUI("fps.textcolor"), MDFN_GetSettingUI("fps.bgcolor"));
+  FPS_Init(MDFN_GetSettingUI("fps.position"), MDFN_GetSettingUI("fps.scale"), MDFN_GetSettingUI("fps.font"), MDFN_GetSettingUI("fps.textcolor"), MDFN_GetSettingUI("fps.bgcolor"));
 	 if(MDFN_GetSettingB("fps.autoenable"))
           FPS_ToggleView();
         }
@@ -2488,7 +2493,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	 ret = -1;
 	 NeedExitNow = 1;
 	}
- }
+}
  catch(std::exception& e)
  {
   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
@@ -2496,35 +2501,34 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
   NeedExitNow = 1;
  }
 
-	while(MDFN_LIKELY(!NeedExitNow))
+while(MDFN_LIKELY(!NeedExitNow))
+{
+ MThreading::Mutex_Lock(VTMutex);	/* Lock mutex */
+try
+{
+	if(FatalVideoError > 0)
 	{
-	 MThreading::Mutex_Lock(VTMutex);	/* Lock mutex */
+	 PumpWrap();
+	 NeedVideoSync = 0;
+	 NeededWMInputBehavior_Dirty = false;
+	 VTReady.store(-1, std::memory_order_release);
+	}
+	else
+	{
+	 PumpWrap();
 
-	 try
-	 {
-	  if(FatalVideoError > 0)
-	  {
-	   PumpWrap();
-	   NeedVideoSync = 0;
-	   NeededWMInputBehavior_Dirty = false;
-	   VTReady.store(-1, std::memory_order_release);
-	  }
-	  else
-	  {
-	   PumpWrap();
-
-	   if(MDFN_UNLIKELY(NeedVideoSync))
-        {
-	     Video_Sync(CurGame);
-	     PumpWrap();
-	     NeedVideoSync = 0;
+	 if(MDFN_UNLIKELY(NeedVideoSync))
+  {
+	  Video_Sync(CurGame);
+	  PumpWrap();
+	  NeedVideoSync = 0;
 		}
 		// SLK
 	   if(MDFN_LIKELY(NeedResolutionChange))
 		{
 		 printf("MAIN - Gameloop - Call for resolution change\n");
 		 Video_ChangeResolution(CurGame, resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq);
-         // ??? PumpWrap(); 
+   PumpWrap();
 		 NeedResolutionChange--;
 		 printf("MAIN - Gameloop - End of resolution change\n");
 		}
@@ -2536,44 +2540,43 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	    NeededWMInputBehavior_Dirty = false;
 	   }
 
-	   {
-	    const int vtr = VTReady.load(std::memory_order_acquire);
-
-            if(vtr >= 0)
-            {
-             BlitScreen(SoftFB[vtr].surface.get(), &SoftFB[vtr].rect, SoftFB[vtr].lw.get(), VTRotated, SoftFB[vtr].field, VTSSnapshot);
-
-	     // Set to -1 after we're done blitting everything(including on-screen display stuff), and NOT just the emulated system's video surface.
-             VTReady.store(-1, std::memory_order_release);
-            }
-	   }
-	  }
-	  //
-	  //
-	  //
-	  if(FatalVideoError < 0)
-	   FatalVideoError = 0;
-	 }
-	 catch(std::exception& e)
-	 {
-	  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-	  if(FatalVideoError == 0)
 	  {
- 	   MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */ 
-	   FatalVideoError = 1;
-	  }
-	  else
-	  {	  
-	   ret = -1;
-           NeedExitNow = 1;
-	   MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
-	   goto VideoErrorExit;
+	   const int vtr = VTReady.load(std::memory_order_acquire);
+    if(vtr >= 0)
+    {
+     BlitScreen(SoftFB[vtr].surface.get(), &SoftFB[vtr].rect, SoftFB[vtr].lw.get(), VTRotated, SoftFB[vtr].field, VTSSnapshot);
+
+	    // Set to -1 after we're done blitting everything(including on-screen display stuff), and NOT just the emulated system's video surface.
+     VTReady.store(-1, std::memory_order_release);
+    }
 	  }
 	 }
+	 //
+	 //
+	 //
+	 if(FatalVideoError < 0)
+	  FatalVideoError = 0;
+	}
+	catch(std::exception& e)
+	{
+	 MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+	 if(FatalVideoError == 0)
+	 {
+   MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */ 
+	  FatalVideoError = 1;
+	 }
+	 else
+	 {	  
+	  ret = -1;
+   NeedExitNow = 1;
+	  MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
+	  goto VideoErrorExit;
+	 }
+	}
 
-         MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
+  MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
 
-	 MThreading::Sem_TimedWait(VTWakeupSem, 1);
+  MThreading::Sem_TimedWait(VTWakeupSem, 1);
 	}
 	VideoErrorExit:;
 	//
@@ -2594,14 +2597,14 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	MThreading::Sem_Destroy(VTWakeupSem);
 
 	MThreading::Mutex_Destroy(VTMutex);
-        MThreading::Mutex_Destroy(EVMutex);
+ MThreading::Mutex_Destroy(EVMutex);
 
 	RemoveSignalHandlers();
 
 	JoystickManager::Kill();
 
 	SaveSettings();	// Call before we destroy video, so the user has some feedback as to
-		        // when it's safe to start another Mednafen instance.
+                 // when it's safe to start another Mednafen instance.
 
 	// lockfs.reset() after SaveSettings()
 	lockfs.reset(nullptr);
@@ -2612,7 +2615,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 
 	SDL_Quit();
 
-        return ret;
+ return ret;
 }
 
 

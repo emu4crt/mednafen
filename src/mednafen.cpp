@@ -52,13 +52,14 @@
 #include "qtrecord.h"
 
 // SLK
+int resolution_switch_setting = 0;
 bool use_native_resolution = false;
 bool use_super_resolution = false;
 bool use_switchres = false;
 bool resolution_to_change;
-double resolution_to_change_vfreq;
 int resolution_to_change_w;
 int resolution_to_change_h;
+double resolution_to_change_vfreq;
 int current_game_resolution_w;
 int current_game_resolution_h;
 bool native_resolution_vcenter = true;

@@ -24,6 +24,7 @@
 // SLK
 
 // option activation flags - set by Mednafen Video setting processing
+extern int resolution_switch_setting;
 extern bool use_native_resolution;
 extern bool use_super_resolution;
 extern bool use_switchres;

@@ -161,59 +161,71 @@ void DrawSaveStates(int32 screen_w, int32 screen_h, double exs, double eys, int 
  } // end if(StateStatus)
 
  if(PreviewSurface)
-{
+ {
   MDFN_Rect tdrect, drect;
 
-  int meow = ((screen_w / CurGame->nominal_width) + 1) / 2;
-  if(!meow) meow = 1;
-
-  tdrect.w = TextRect.w * meow;
-  tdrect.h = TextRect.h * meow;
-  tdrect.x = (screen_w - tdrect.w) / 2; 
   // SLK - Custom savestate selection OSD
-  if(use_native_resolution || use_super_resolution || use_switchres)
-    {
-      switch(screen_h){
-	case 240:tdrect.y = screen_h - tdrect.h - 18;
-		 break;
-	case 288:tdrect.y = screen_h - tdrect.h - 32;
-		 break;
-	case 480:tdrect.y = screen_h - tdrect.h - 32;
-		 break;
-	case 576:tdrect.y = screen_h - tdrect.h - 64;
-		 break;
-	default:tdrect.y = screen_h - tdrect.h;
-      }
-      if(use_super_resolution)   // TODO SR
-      {
-	tdrect.w = tdrect.w * 8;
-	tdrect.x = (screen_w - tdrect.w) / 2;
-      }
-      BlitRaw(TextSurface, &TextRect, &tdrect);
-      
-      drect.w = screen_w * 0.5 + 3;  // TODO: Why 3 ???
-      drect.h = screen_h * 0.5 + 3;
-      drect.x = (screen_w - drect.w) / 2;
-      drect.y = tdrect.y - drect.h; // SLK
+  if(resolution_switch_setting)
+  {
+   printf("Savestate OSD - screen_w: %d, screen_h:%d - exs: %d, eys: %d\n",screen_w,screen_h,exs, eys);
+   switch(screen_h)
+   {
+	  case 240:
+     tdrect.y = screen_h - 18;
+	   break;
+    case 288:
+     tdrect.y = screen_h - 32;
+	   break;
+	  case 480:
+     tdrect.y = screen_h - 32;
+	   break;
+	  case 576:
+     tdrect.y = screen_h - 64;
+	   break;
+	  default:
+     tdrect.y = screen_h - 32;
+   }
+   // Preview
+   drect.w = screen_w * 0.5 + 3;
+   drect.h = screen_h * 0.5 + 3;
+   drect.x = (screen_w - drect.w) / 2;
+   drect.y = ((screen_h - drect.h) / 2) - 3;
+   //printf(" Preview SRC  rect: %dx%d - %d,%d\n",PreviewRect.w,PreviewRect.h,PreviewRect.x,PreviewRect.y);
+   //printf(" Preview DEST rect: %dx%d - %d,%d\n",drect.w,drect.h,drect.x,drect.y);
+   BlitRaw(PreviewSurface, &PreviewRect, &drect);
 
-      BlitRaw(PreviewSurface, &PreviewRect, &drect);
-    }
-  else  // native OSD display
-    {
-      tdrect.y = screen_h - tdrect.h;
+   // Text
+   //printf("PreviewRect: %dx%d - %d,%d\n",PreviewRect.w,PreviewRect.h,PreviewRect.x,PreviewRect.y);
+   tdrect.w = TextRect.w * (screen_w / TextRect.w);
+   tdrect.x = (screen_w - tdrect.w) / 2;
+   tdrect.h = TextRect.h * 1;
+   tdrect.y = drect.h + drect.y;
+   //printf("  Text SRC  rect: %dx%d - %d,%d\n",TextRect.w,TextRect.h,TextRect.x,TextRect.y);
+   //printf("  Text DEST rect: %dx%d - %d,%d\n",drect.w,drect.h,drect.x,drect.y);
+   BlitRaw(TextSurface, &TextRect, &tdrect);
 
-      BlitRaw(TextSurface, &TextRect, &tdrect);
-
-      drect.w = PreviewRect.w * meow;
-      drect.h = PreviewRect.h * meow;
-      drect.x = (screen_w - drect.w) / 2;
-      drect.y = screen_h - drect.h - tdrect.h - 4;
-
-      BlitRaw(PreviewSurface, &PreviewRect, &drect);
-    }
-  // SLK - end
   }
+  else  // native OSD display
+  {
+   int meow = ((screen_w / CurGame->nominal_width) + 1) / 2;
+   if(!meow) meow = 1;
 
+   tdrect.w = TextRect.w * meow;
+   tdrect.h = TextRect.h * meow;
+   tdrect.x = (screen_w - tdrect.w) / 2; 
+   tdrect.y = screen_h - tdrect.h;
+
+   BlitRaw(TextSurface, &TextRect, &tdrect);
+
+   drect.w = PreviewRect.w * meow;
+   drect.h = PreviewRect.h * meow;
+   drect.x = (screen_w - drect.w) / 2;
+   drect.y = screen_h - drect.h - tdrect.h - 4;
+
+   BlitRaw(PreviewSurface, &PreviewRect, &drect);
+  }
+  // SLK - end
+ }
 }
 
 void MT_SetStateStatus(StateStatusStruct *status)

@@ -141,7 +141,7 @@ enum
  RES_NATIVE = 1,
  RES_SUPER = 2,
  RES_SWITCHRES = 3,
-	RES_SWITCHRES_SUPER = 4
+ RES_SWITCHRES_SUPER = 4
 };
 // SLK - end
 
@@ -149,11 +149,11 @@ enum
 static const MDFNSetting_EnumList ResolutionSwitch_List[] =
 {
  // Legacy:
- { "0", RES_STATIC},
+ { "0", RES_STATIC, "Disabled", gettext_noop("Disabled")},
  { "native", RES_NATIVE, "Native resolutions", gettext_noop("Use emulated system native resolution for output") },
  { "super", RES_SUPER, "Super resolutions", gettext_noop("Use super resolutions for output") },
  { "switchres", RES_SWITCHRES, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output resolution") },
-	{ "switchres_super", RES_SWITCHRES_SUPER, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output super resolution (2560xY)") },
+ { "switchres_super", RES_SWITCHRES_SUPER, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output super resolution (2560xY)") },
  { NULL, 0 },
 };
 // SLK - end
@@ -180,7 +180,7 @@ static const MDFNSetting DriverSettings[] =
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
   	
-		{ "video.resolution_switch", MDFNSF_NOFLAGS, gettext_noop("In-game video resolution switch (0, native, super, switchres or switchres_super)."), NULL, MDFNST_ENUM, "0", NULL, NULL, NULL, NULL, ResolutionSwitch_List },
+  { "video.resolution_switch", MDFNSF_NOFLAGS, gettext_noop("In-game video resolution switch (0, native, super, switchres or switchres_super)."), NULL, MDFNST_ENUM, "0", NULL, NULL, NULL, NULL, ResolutionSwitch_List },
 
   { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "0.25", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },

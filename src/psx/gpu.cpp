@@ -1484,13 +1484,13 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
      int32 ourBufferWidth = dmw;
      
      int32 leftOffset = (actualGameBufferWidth - ourBufferWidth) / 2;
-     //leftOffset *= DotClockRatios[dmc]; // Get back into PSX GPU co-ords.
+     leftOffset *= DotClockRatios[dmc]; // Get back into PSX GPU co-ords.
      leftOffset = std::max<int32>(leftOffset, 0); // Make sure not negative
      dx_start += leftOffset; // Offset the PSX buffer to render relative to our frame.
      // 
      
-     dest_line = ((scanline - FirstVisibleLine) << espec->InterlaceOn) + espec->InterlaceField;
-     dest = surface->pixels + (drxbo - dmpa) + dest_line * surface->pitch32;
+     //dest_line = ((scanline - FirstVisibleLine) << espec->InterlaceOn) + espec->InterlaceField;
+     //dest = surface->pixels + (drxbo - dmpa) + dest_line * surface->pitch32;
 
      if(dx_end < dx_start)
       dx_end = dx_start;

@@ -2156,8 +2156,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
 
        if (sub_src_rect.w  > (sub_dest_rect.w / sr_x_scale)) // horizontal crop to fit screen
        {
-        // SLK - printf("    Horizontal centering ON - (sub_src_rect.w  vs sub_dest_rect.w / sr_x_scale):%d vs %d\n",sub_src_rect.w, (sub_dest_rect.w / sr_x_scale));
-        sub_src_rect.x = (sub_src_rect.w - (sub_dest_rect.w / sr_x_scale)) / 2;
+        printf("    Horizontal centering ON - (sub_src_rect.w  vs sub_dest_rect.w / sr_x_scale):%d vs %d\n",sub_src_rect.w, (sub_dest_rect.w / sr_x_scale));
+        sub_src_rect.x = sub_src_rect.x + ((sub_src_rect.w - (sub_dest_rect.w / sr_x_scale)) / 2);
         sub_src_rect.w = sub_dest_rect.w / sr_x_scale;
        }
 

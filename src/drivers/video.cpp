@@ -991,7 +991,9 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
    break;
   default: SMDRect.y = h - SMDRect.h - 64;
  }
- SMDRect.w = w; // OSD rect w
+ SMDRect.y = SMDRect.y * sr_y_scale;
+ SMDRect.w = w * sr_x_scale; // OSD rect w
+ SMDRect.h = SMDRect.h * sr_y_scale;
 
  if(SMSurface)
  {
@@ -1010,8 +1012,8 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
  screen_dest_rect.h = video_settings.yres;
 
  // for state preview OSD
- screen_w = w;
- screen_h = h;
+ screen_w = video_settings.xres;
+ screen_h = video_settings.yres;
 
  //exs = sr_x_scale;
  //exs = sr_y_scale;

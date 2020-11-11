@@ -6,6 +6,7 @@
 .Tpo
 .deps
 .dirstamp
+.vscode
 /include/config.h.in~
 /autom4te.cache
 /Makefile

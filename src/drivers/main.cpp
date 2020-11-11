@@ -153,7 +153,7 @@ static const MDFNSetting_EnumList ResolutionSwitch_List[] =
  { "native", RES_NATIVE, "Native resolutions", gettext_noop("Use emulated system native resolution for output") },
  { "super", RES_SUPER, "Super resolutions", gettext_noop("Use super resolutions for output") },
  { "switchres", RES_SWITCHRES, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output resolution") },
- { "switchres_super", RES_SWITCHRES_SUPER, "SwitchRes feature", gettext_noop("Use switchres library for dynamic output super resolution (2560xY)") },
+ { "switchres_super", RES_SWITCHRES_SUPER, "SwitchRes super resolution feature", gettext_noop("Use switchres library for dynamic output super resolution (2560xY)") },
  { NULL, 0 },
 };
 // SLK - end
@@ -1346,9 +1346,9 @@ static int GameLoop(void *arg)
  while(GameThreadRun)
  {
   //SLK - trap change resolution request
-  if(resolution_to_change)
+  if(resolution_switch_setting && resolution_to_change)
   {
-   printf("MAIN - GameLoop - Game resolution mode is now: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+   printf("main.cpp: GameLoop - Game resolution mode is now: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
    NeedResolutionChange++;
  	 resolution_to_change = false;
 	 }
@@ -2393,10 +2393,10 @@ MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
 
 	//MDFN_Notify(MDFN_NOTICE_ERROR, _("Get video.resolution_switch\n"));
  resolution_switch_setting = MDFN_GetSettingI("video.resolution_switch");
- printf("MAIN - SETTINGS - video.resolution: %d\n",resolution_switch_setting);
+ printf("main.cpp: SETTINGS - video.resolution switch: %d\n",resolution_switch_setting);
 	if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_SWITCHRES_SUPER)
 	{
-	 printf("SWITCHRES ON\n");
+	 printf("main.cpp: SWITCHRES ON\n");
 		Video_SwitchResInit(); // SLK
 	}
 
@@ -2524,13 +2524,13 @@ try
 	  NeedVideoSync = 0;
 		}
 		// SLK
-	   if(MDFN_LIKELY(NeedResolutionChange))
+	 if(MDFN_LIKELY(NeedResolutionChange))
 		{
-		 printf("MAIN - Gameloop - Call for resolution change\n");
+		 printf("main.cpp: Gameloop - Call for resolution change\n");
 		 Video_ChangeResolution(CurGame, resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq);
    PumpWrap();
-		 NeedResolutionChange--;
-		 printf("MAIN - Gameloop - End of resolution change\n");
+			NeedResolutionChange--;
+		 printf("main.cpp: Gameloop - End of resolution change\n");
 		}
 		// SLK END
 

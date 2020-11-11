@@ -534,7 +534,7 @@ static void SyncCleanup(void)
 
 void Video_Kill(void)
 {
- printf("VIDEO - Video kill - start...\n");
+ printf("VIDEO - Video_kill - start...\n");
  SyncCleanup();
 
  if(window)
@@ -834,7 +834,6 @@ void Video_SwitchResInit()
  use_switchres = true;
 }
 
-
 #ifdef WIN32
 static void Video_WinSetVideoMode(int iWidth, int iHeight)
 {
@@ -861,12 +860,17 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
 
  current_game_resolution_h = h;
  current_game_resolution_w = w;
-
+ 
  if(resolution_switch_setting == RES_SUPER || resolution_switch_setting == RES_SWITCHRES_SUPER)
  {
   printf("VIDEO - Video_ChangeResolution - Use SUPER resolution\n");
   //if(h == video_settings.yres / sr_y_scale ) return; // No change required
   w = 2560;
+  sr_x_scale = floor(w / current_game_resolution_w);
+ }
+ else
+ {
+  sr_x_scale = 1;
  }
 
  printf("VIDEO - Video_ChangeResolution - video_settings.fullscreen: %d\n",video_settings.fullscreen);
@@ -882,9 +886,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   
   video_settings.xres = w;
   video_settings.yres = h;
-
   sr_x_scale = 1;
-  sr_y_scale = 1;
  }
  else 
  {
@@ -908,9 +910,13 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
    video_settings.xres = swres_result.width;
    video_settings.yres = swres_result.height;
 
-   sr_x_scale = video_settings.xscalefs = swres_result.x_scale;
+   if(resolution_switch_setting == RES_SWITCHRES)
+    sr_x_scale = video_settings.xscalefs = swres_result.x_scale;
+   
    sr_y_scale = video_settings.yscalefs = swres_result.y_scale;
-
+   
+   printf("VIDEO - Video_ChangeResolution - sr_switch_to_mode result: %dx%d - X scale: %d; Y scale: %d\n",video_settings.xres,video_settings.yres,swres_result.x_scale,swres_result.y_scale);
+   
    #ifdef WIN32
    SDL_SetWindowSize(window, video_settings.xres, video_settings.yres);
    #endif
@@ -953,71 +959,63 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
     trymode.refresh_rate = 0;
 
     if (SDL_GetClosestDisplayMode(displayIndex, &trymode, &mode) == NULL)
-    {
      printf("VIDEO - Video_ChangeResolution - No suitable display mode was found, %s\n",SDL_GetError());
-    }
     else
     {
      //printf("VIDEO - Video_ChangeResolution - Received: \t%dx%dpx @ %dhz \n", mode.w, mode.h, mode.refresh_rate);
      if(SDL_SetWindowDisplayMode(window, &mode) < 0)
-     {
       printf("VIDEO - Video_ChangeResolution - ERROR - SDL_SetWindowDisplayMode: '%s'\n", SDL_GetError());
-     }
     }
    }
    #endif
+   video_settings.xres = w;
+   video_settings.yres = h;
 
-  video_settings.xres = w;
-  video_settings.yres = h;
-
-  sr_x_scale = 1;
-  sr_y_scale = 1;
-
+   sr_y_scale = 1;
   }
  }
- // OSD D Rect - vertical offest
- switch(h){
-  case 240:
-   SMDRect.y = h - SMDRect.h - 18;
-   break;
-  case 288:
-   SMDRect.y = h - SMDRect.h - 32;
-   break;
-  case 480:
-   SMDRect.y = h - SMDRect.h - 32;
-   break;
-  case 576:
-   SMDRect.y = h - SMDRect.h - 64;
-   break;
-  default: SMDRect.y = h - SMDRect.h - 64;
- }
- SMDRect.y = SMDRect.y * sr_y_scale;
- SMDRect.w = w * sr_x_scale; // OSD rect w
- SMDRect.h = SMDRect.h * sr_y_scale;
+
+ // for OSD (state preview)
+ screen_w = video_settings.xres;
+ screen_h = video_settings.yres;
+
+ int nx = floor(screen_h / 224);
+
+ SMRect.w = current_game_resolution_w;
+ SMRect.h = 18 + 2;
+
+ SMDRect.w = screen_w;
+ SMDRect.h = SMRect.h * nx;
+ SMDRect.y = ((screen_h + (nx * 224)) / 2) - SMDRect.h;
 
  if(SMSurface)
  {
-   SMRect.w = current_game_resolution_w;
-   SMDRect.w = w * sr_x_scale;
-   MDFN_PixelFormat SMFormat = SMSurface->format;
-   delete SMSurface;
-   SMSurface = nullptr;
-   SMSurface = new MDFN_Surface(NULL, SMRect.w, SMRect.h, SMRect.w, SMFormat);
+  printf("VIDEO - Video_ChangeResolution - SMSurface: reset\n");
+  MDFN_PixelFormat SMFormat = SMSurface->format;
+  delete SMSurface;
+  SMSurface = nullptr;
+  SMSurface = new MDFN_Surface(NULL, SMRect.w, SMRect.h, SMRect.w, SMFormat);
  }
+ /*
+ printf("VIDEO - Video_ChangeResolution - SMSurface: Game resolution:   %dx%d\n",current_game_resolution_w,current_game_resolution_h);
+ printf("VIDEO - Video_ChangeResolution - SMSurface: Screen resolution: %dx%d\n",screen_w,screen_h);
+ printf("VIDEO - Video_ChangeResolution - SMSurface: x_scale:%d, y_scale:%d\n",sr_x_scale,sr_y_scale);
+ printf("VIDEO - Video_ChangeResolution - SMSurface: w: %d, h: %d\n",w,h);
+ printf("VIDEO - Video_ChangeResolution - SMSurface: SMRect w %d, h %d, x %d, y %d\n",SMRect.w, SMRect.h, SMRect.x,SMRect.y);
+ printf("VIDEO - Video_ChangeResolution - SMSurface: SMDRect w %d, h %d, x %d, y %d\n",SMDRect.w, SMDRect.h, SMDRect.x,SMDRect.y);
+ */
 
- //printf("VIDEO - Video_SwitchResInit - Resize video output to %dx%d\n", w,h);
+ // game display target
  screen_dest_rect.x = 0;
  screen_dest_rect.y = 0;
  screen_dest_rect.w = video_settings.xres;
  screen_dest_rect.h = video_settings.yres;
 
- // for state preview OSD
- screen_w = video_settings.xres;
- screen_h = video_settings.yres;
+ // useless ???
+ exs = sr_x_scale;
+ exs = sr_y_scale;
 
- //exs = sr_x_scale;
- //exs = sr_y_scale;
-  
+ // Reset view port
  ogl_blitter->SetViewport(video_settings.xres, video_settings.yres);
  printf("VIDEO - Video_ChangeResolution - Completed in: %llu\n", (unsigned long long)(Time::MonoUS() - before));
 }
@@ -1417,7 +1415,6 @@ void Video_Sync(MDFNGI *gi)
   //ret = swres->sr_add_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
   //printf("VIDEO - Video_SwitchResInit - sr_add_mode return: %d\n", ret);
   #endif
-
   printf("VIDEO - Video_Sync - sr_switch_to_mode call: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h, resolution_to_change_vfreq);
   ret = swres->sr_switch_to_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
   printf("VIDEO - Video_Sync - sr_switch_to_mode return: %u\n", ret);
@@ -2158,7 +2155,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
 
        if (sub_src_rect.w  > (sub_dest_rect.w / sr_x_scale)) // horizontal crop to fit screen
        {
-        printf("    Horizontal centering ON - (sub_src_rect.w  vs sub_dest_rect.w / sr_x_scale):%d vs %d\n",sub_src_rect.w, (sub_dest_rect.w / sr_x_scale));
+        //printf("    Horizontal centering ON - (sub_src_rect.w  vs sub_dest_rect.w / sr_x_scale):%d vs %d\n",sub_src_rect.w, (sub_dest_rect.w / sr_x_scale));
         sub_src_rect.x = sub_src_rect.x + ((sub_src_rect.w - (sub_dest_rect.w / sr_x_scale)) / 2);
         sub_src_rect.w = sub_dest_rect.w / sr_x_scale;
        }

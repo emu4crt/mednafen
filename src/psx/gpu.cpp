@@ -84,7 +84,7 @@ int res_change_count;
 
 void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global variables used in MAIN & VIDEO
 {
-  printf("PSX - gpu - GPU_NewDisplayMode: %d\n",V);
+  // printf("PSX - gpu - GPU_NewDisplayMode: %d\n",V);
   // GP1(08h) - Display mode
   //   0-1   Horizontal Resolution 1     (0=256, 1=320, 2=512, 3=640) ;GPUSTAT.17-18
   //   2     Vertical Resolution         (0=240, 1=480, when Bit5=1)  ;GPUSTAT.19
@@ -139,7 +139,7 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
   
   if(prev_resolution_w != resolution_to_change_w || prev_resolution_h != resolution_to_change_h)
   {
-    if(res_change_count < 2)
+    if(res_change_count < 3)
     {
   	  res_change_count += 1;
 	    printf("PSX GPU - Startup resolution change bypass (%d).\n",res_change_count);
@@ -149,7 +149,7 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
     {
 	    prev_resolution_w = resolution_to_change_w; // will be used in VIDEO.cpp
 	    prev_resolution_h = resolution_to_change_h;
-	    printf("PSX - GPU register - resolution change to: %dx%d (V=%d)\n",resolution_to_change_w,resolution_to_change_h,V);
+	    //printf("PSX - GPU register - resolution change to: %dx%d (V=%d)\n",resolution_to_change_w,resolution_to_change_h,V);
 	    resolution_to_change = true;  // will be reset in VIDEO.cpp
     }
   }

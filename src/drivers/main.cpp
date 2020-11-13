@@ -1345,11 +1345,11 @@ static int GameLoop(void *arg)
 {
  while(GameThreadRun)
  {
-  //SLK - trap change resolution request
-  if(resolution_switch_setting && resolution_to_change)
+  //SLK - trap change resolution request (in first loop, current_game_resolution_w == 0)
+  if(resolution_switch_setting && resolution_to_change && (current_game_resolution_w != 0))
   {
-   printf("main.cpp: GameLoop - Game resolution mode is now: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
-   NeedResolutionChange++;
+			printf("main.cpp: GameLoop - Switch: %dx%d@%f -> %dx%d@%f\n",current_game_resolution_w,current_game_resolution_w,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+			NeedResolutionChange++;
  	 resolution_to_change = false;
 	 }
 	 // SLK - end
@@ -2526,10 +2526,10 @@ try
 		// SLK
 	 if(MDFN_LIKELY(NeedResolutionChange))
 		{
-		 printf("main.cpp: Gameloop - Call for resolution change\n");
+		 NeedResolutionChange--;
+			printf("main.cpp: Gameloop - Call for resolution change\n");
 		 Video_ChangeResolution(CurGame, resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq);
    PumpWrap();
-			NeedResolutionChange--;
 		 printf("main.cpp: Gameloop - End of resolution change\n");
 		}
 		// SLK END

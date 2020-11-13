@@ -860,6 +860,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
 
  current_game_resolution_h = h;
  current_game_resolution_w = w;
+ current_game_resolution_vfreq = vfreq;
  
  if(resolution_switch_setting == RES_SUPER || resolution_switch_setting == RES_SWITCHRES_SUPER)
  {
@@ -1124,6 +1125,15 @@ void Video_Sync(MDFNGI *gi)
  
  // SLK - set video settings - Init some settings & disable some options in conflict with native resolution
  if(resolution_switch_setting > 0){
+  // Enable dynamic output resolution switch
+  
+  printf("Initializing using video mode: %dx%dx%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+  
+  // Store current game video mode
+  current_game_resolution_h = resolution_to_change_h;
+  current_game_resolution_w = resolution_to_change_w;
+  current_game_resolution_vfreq = resolution_to_change_vfreq;
+
   // Enable dynamic output resolution switch
   if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_NATIVE)
   {

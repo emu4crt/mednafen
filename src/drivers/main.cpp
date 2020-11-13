@@ -1346,14 +1346,19 @@ static int GameLoop(void *arg)
  while(GameThreadRun)
  {
   //SLK - trap change resolution request (in first loop, current_game_resolution_w == 0)
-  if(resolution_switch_setting && resolution_to_change && (current_game_resolution_w != 0))
-  {
-			printf("main.cpp: GameLoop - Switch: %dx%d@%f -> %dx%d@%f\n",current_game_resolution_w,current_game_resolution_w,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
-			NeedResolutionChange++;
- 	 resolution_to_change = false;
-	 }
+		if(resolution_switch_setting && resolution_to_change)
+		{
+		 printf("main.cpp: GameLoop - Switch: %dx%d@%f -> %dx%d@%f\n",current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+
+			if(current_game_resolution_w)
+				NeedResolutionChange++;
+			else  // occurs on startup
+				printf("main.cpp: GameLoop - bypass: %dx%d@%f -> %dx%d@%f\n",current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+
+		 resolution_to_change = false;
+ 	}
 	 // SLK - end
-	 
+
 		int16 *sound;
 	 int32 ssize;
 	 bool fskip;

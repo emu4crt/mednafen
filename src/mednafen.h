@@ -40,10 +40,10 @@ extern int resolution_to_change_w;
 extern int resolution_to_change_h;
 extern double resolution_to_change_vfreq;
 
-// current video mode information - set in drivers\video.cpp
+// current video mode information - set in drivers\video.cpp (extern required???)
 extern int current_game_resolution_w; 
 extern int current_game_resolution_h;
-
+extern double current_game_resolution_vfreq;
 // SLK end
 
 

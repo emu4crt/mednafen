@@ -62,6 +62,8 @@ int resolution_to_change_h;
 double resolution_to_change_vfreq;
 int current_game_resolution_w;
 int current_game_resolution_h;
+double current_game_resolution_vfreq;
+
 bool native_resolution_vcenter = true;
 // SLK end
 

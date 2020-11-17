@@ -614,8 +614,21 @@ static void GenerateWindowedDestRect(void)
 
  screen_dest_rect.x = 0;
  screen_dest_rect.y = 0;
- screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
- screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
+
+ // SLK
+ //screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
+ //screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);   
+ if(resolution_switch_setting)
+ {
+  screen_dest_rect.w = video_settings.xres;
+  screen_dest_rect.h = video_settings.yres;
+ }
+ else
+ {
+  screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
+  screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
+ }
+ // SLK end
 
  if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
   std::swap(screen_dest_rect.w, screen_dest_rect.h);
@@ -1126,7 +1139,6 @@ void Video_Sync(MDFNGI *gi)
  // SLK - set video settings - Init some settings & disable some options in conflict with native resolution
  if(resolution_switch_setting > 0){
   // Enable dynamic output resolution switch
-  
   printf("Initializing using video mode: %dx%dx%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
   
   // Store current game video mode
@@ -1138,8 +1150,7 @@ void Video_Sync(MDFNGI *gi)
   if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_NATIVE)
   {
    use_native_resolution = true;
-   video_settings.xres = resolution_to_change_w;  // for fullscreen mode
-   //VideoGI->nominal_width = resolution_to_change_w;  // for windowed mode
+   video_settings.xres = resolution_to_change_w; 
    sr_x_scale = 1;
    sr_x_scale = 1;
   }
@@ -1147,10 +1158,8 @@ void Video_Sync(MDFNGI *gi)
   {
    use_super_resolution = true;
    video_settings.xres = 2560;  // for fullscreen mode
-   //VideoGI->nominal_width = 2560;  // SLK TODO: nothing else?
   }
   video_settings.yres = current_game_resolution_h = resolution_to_change_h;  // for fullscreen mode
-  VideoGI->nominal_height = current_game_resolution_h = resolution_to_change_h;  // for windowed mode
   video_settings.xscale = 1;
   video_settings.yscale = 1;
   video_settings.xscalefs = 1;
@@ -1405,13 +1414,6 @@ void Video_Sync(MDFNGI *gi)
   if(yres > 0)
    trymode.h = yres;
 
-  printf("video.cpp: Video_Sync - SDL_GetClosestDisplayMode\n");
-  if(!SDL_GetClosestDisplayMode(dindex, &trymode, &mode))
-  {
-   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because no modes big enough for %dx%d."), trymode.w, trymode.h);
-   goto TryWindowed;
-  }
-
   // SLK SR - TODO - move to a function ?
   if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_SWITCHRES_SUPER)
   {
@@ -1420,64 +1422,70 @@ void Video_Sync(MDFNGI *gi)
    int ret;
    sr_mode swres_result;
 
-  #if WIN32
-  //printf("video.cpp: Video_ChangeResolution - sr_add_mode...\n");
-  //ret = swres->sr_add_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
-  //printf("video.cpp: Video_SwitchResInit - sr_add_mode return: %d\n", ret);
-  #endif
-  printf("video.cpp: Video_Sync - sr_switch_to_mode call: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h, resolution_to_change_vfreq);
-  ret = swres->sr_switch_to_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
-  printf("video.cpp: Video_Sync - sr_switch_to_mode return: %u\n", ret);
-   
-  printf("video.cpp: Video_Sync - SWITCHRES result %dx%d - x=%d y=%d\n", swres_result.width, swres_result.height, swres_result.x_scale, swres_result.y_scale);
+   #if WIN32
+   //printf("video.cpp: Video_ChangeResolution - sr_add_mode...\n");
+   //ret = swres->sr_add_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
+   //printf("video.cpp: Video_SwitchResInit - sr_add_mode return: %d\n", ret);
+   #endif
+   printf("video.cpp: Video_Sync - sr_switch_to_mode call: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h, resolution_to_change_vfreq);
+   ret = swres->sr_switch_to_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
+   printf("video.cpp: Video_Sync - sr_switch_to_mode return: %u\n", ret);
 
-  mode.w = swres_result.width;
-  mode.h = swres_result.height;
+   printf("video.cpp: Video_Sync - SWITCHRES result %dx%d - x=%d y=%d\n", swres_result.width, swres_result.height, swres_result.x_scale, swres_result.y_scale);
 
-  sr_x_scale = swres_result.x_scale;
-  sr_y_scale = swres_result.y_scale;
+   mode.w = swres_result.width;
+   mode.h = swres_result.height;
 
-  screen_w = video_settings.xres = swres_result.width;
-  screen_h = video_settings.yres = swres_result.height;
-  video_settings.xscale = sr_x_scale ;
-  video_settings.yscale = sr_y_scale ;
+   sr_x_scale = swres_result.x_scale;
+   sr_y_scale = swres_result.y_scale;
 
-  printf("video.cpp: Video_Sync - SDL_SetWindowSize %dx%d\n", video_settings.xres , video_settings.yres);
-  SDL_SetWindowSize(window, video_settings.xres , video_settings.yres);
+   screen_w = video_settings.xres = swres_result.width;
+   screen_h = video_settings.yres = swres_result.height;
+   video_settings.xscale = sr_x_scale ;
+   video_settings.yscale = sr_y_scale ;
+
+   printf("video.cpp: Video_Sync - SDL_SetWindowSize %dx%d\n", video_settings.xres , video_settings.yres);
+   SDL_SetWindowSize(window, video_settings.xres , video_settings.yres);
     
-  printf("video.cpp: Video_Sync - SDL_SetWindowDisplayMode FULLSCREEN\n");
+   printf("video.cpp: Video_Sync - SDL_SetWindowDisplayMode FULLSCREEN\n");
     
-  #ifdef WIN32
-  if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0) 
-  #else
-  printf("video.cpp: Video_Sync - Call SDL_SetWindowDisplayMode (SDL_WINDOW_FULLSCREEN_DESKTOP)\n");
-  if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0)
-  #endif
-  {
-   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
-   goto TryWindowed;
+   #ifdef WIN32
+   if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0) 
+   #else
+   printf("video.cpp: Video_Sync - Call SDL_SetWindowDisplayMode (SDL_WINDOW_FULLSCREEN_DESKTOP)\n");
+   if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0)
+   #endif
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
+    goto TryWindowed;
+   }
   }
- }
- else 
- {
-  if(SDL_SetWindowDisplayMode(window, &mode) < 0)
+  else 
   {
-   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowDisplayMode() failed: %s"), SDL_GetError());
-   goto TryWindowed;
+   printf("video.cpp: Video_Sync - SDL_GetClosestDisplayMode\n");
+   if(!SDL_GetClosestDisplayMode(dindex, &trymode, &mode))
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because no modes big enough for %dx%d."), trymode.w, trymode.h);
+    goto TryWindowed;
+   }
+
+   if(SDL_SetWindowDisplayMode(window, &mode) < 0)
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowDisplayMode() failed: %s"), SDL_GetError());
+    goto TryWindowed;
+   }
+   #if 0
+   int old_mousex = 0;
+   int old_mousey = 0;
+   SDL_GetGlobalMouseState(&old_mousex, &old_mousey);
+   #endif
+   printf("video.cpp: Video_Sync - Call SDL_SetWindowFullscreen (SDL_WINDOW_FULLSCREEN)\n");
+   if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
+    goto TryWindowed;
+   }
   }
-  
-  #if 0
-  int old_mousex = 0;
-  int old_mousey = 0;
-  SDL_GetGlobalMouseState(&old_mousex, &old_mousey);
-  #endif
-  printf("video.cpp: Video_Sync - Call SDL_SetWindowFullscreen (SDL_WINDOW_FULLSCREEN)\n");
-  if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
-  {
-   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
-   goto TryWindowed;
-  }
- }
 
   #if 0
   // ugggh

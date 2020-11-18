@@ -1194,14 +1194,24 @@ void Video_Sync(MDFNGI *gi)
  if(screen_dest_rect.w > 16383 || screen_dest_rect.h > 16383)
   throw MDFN_Error(0, _("Window size(%dx%d) is too large!"), screen_dest_rect.w, screen_dest_rect.h);
 
- //printf("video.cpp: Video_Sync - SDL_SetWindowFullscreen (0)\n");
- SDL_SetWindowFullscreen(window, 0);
- SDL_PumpEvents();
- //printf("video.cpp: Video_Sync - SDL_SetWindowSize\n");
- SDL_SetWindowSize(window, screen_dest_rect.w, screen_dest_rect.h);
- SDL_PumpEvents();
- SDL_SetWindowPosition(window, winpos_x, winpos_y);
- winpos_applied = true;
+ // SLK - Avoid window visual glitch at startup - TODO: check with multiscreen
+ if(video_settings.fullscreen && resolution_switch_setting)
+ {
+  //printf("video.cpp: Video_Sync - SDL_WINDOW_FULLSCREEN_DESKTOP (0)\n");
+  SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+  SDL_PumpEvents();
+ }
+ else
+ {
+  //printf("video.cpp: Video_Sync - SDL_SetWindowFullscreen (0)\n");
+  SDL_SetWindowFullscreen(window, 0);
+  //printf("video.cpp: Video_Sync - SDL_SetWindowSize\n");
+  SDL_SetWindowSize(window, screen_dest_rect.w, screen_dest_rect.h);
+  SDL_PumpEvents();
+  SDL_SetWindowPosition(window, winpos_x, winpos_y);
+  winpos_applied = true; 
+ }
+ // SLK - end
  SDL_PumpEvents();
  SDL_SetWindowTitle(window, (gi && gi->name.size()) ? gi->name.c_str() : "Mednafen");
  SDL_PumpEvents();

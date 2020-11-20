@@ -728,20 +728,32 @@ static bool GenerateFullscreenDestRect(void)
  }
  else
  {
-  if(use_switchres)
-  exs = video_settings.xscalefs;
-  eys = video_settings.yscalefs;
+  // SLK - fit to screen
+  if(resolution_switch_setting)
+  {
+   //printf("GenerateFullscreenDestRect - resolution_switch_setting ON\n");
+   screen_dest_rect.w = screen_w;
+   screen_dest_rect.h = screen_h;
+   screen_dest_rect.x = 0;
+   screen_dest_rect.y = 0;
+  }
+  else
+  {
+   exs = video_settings.xscalefs;
+   eys = video_settings.yscalefs;
 
-  screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
-  screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
+   screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
+   screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
 
-  if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
-   std::swap(screen_dest_rect.w, screen_dest_rect.h);
+   if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+    std::swap(screen_dest_rect.w, screen_dest_rect.h);
 
-  screen_dest_rect.x = (screen_w - screen_dest_rect.w) / 2;
-  screen_dest_rect.y = (screen_h - screen_dest_rect.h) / 2;
+   screen_dest_rect.x = (screen_w - screen_dest_rect.w) / 2;
+   screen_dest_rect.y = (screen_h - screen_dest_rect.h) / 2;
+  }
  }
-
+ // SLK end
+ 
  // Quick and dirty kludge for VB's "hli" and "vli" 3D modes.
  screen_dest_rect.x &= ~1;
  screen_dest_rect.y &= ~1;
@@ -1507,24 +1519,12 @@ void Video_Sync(MDFNGI *gi)
 
   screen_w = mode.w;
   screen_h = mode.h;
-  
-  // SLK SR - enforce 1:1 screen_dest_rect
-  if(use_switchres)
+
+  if(!GenerateFullscreenDestRect())
   {
-   screen_dest_rect.w = video_settings.xres;
-   screen_dest_rect.h = video_settings.yres;
-   screen_dest_rect.x = 0;
-   screen_dest_rect.y = 0;
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because screen destination rectangle(%dx%d) is too large!"), screen_dest_rect.w, screen_dest_rect.h);
+   goto TryWindowed;
   }
-  else
-  {
-   if(!GenerateFullscreenDestRect())
-   {
-    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because screen destination rectangle(%dx%d) is too large!"), screen_dest_rect.w, screen_dest_rect.h);
-    goto TryWindowed;
-   }
-  }
-  // SLK SR end
  }
  //
  //

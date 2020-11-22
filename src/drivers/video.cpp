@@ -757,7 +757,6 @@ static bool GenerateFullscreenDestRect(void)
  // Quick and dirty kludge for VB's "hli" and "vli" 3D modes.
  screen_dest_rect.x &= ~1;
  screen_dest_rect.y &= ~1;
-
  return screen_dest_rect.w < 16384 && screen_dest_rect.h < 16384;
 }
 
@@ -871,7 +870,46 @@ static void Video_WinSetVideoMode(int iWidth, int iHeight)
  Mode.dmPelsHeight = iHeight;
  Mode.dmSize = sizeof(Mode);
  Mode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
- printf("video.cpp: Video_WinSetVideoMode - ChangeDisplaySettings return: %ld\n",ChangeDisplaySettings(&Mode, CDS_FULLSCREEN));
+ 
+ long cds = ChangeDisplaySettings(&Mode, CDS_FULLSCREEN);
+ 
+ if(cds == DISP_CHANGE_SUCCESSFUL)
+ {
+  printf("video.cpp: Video_WinSetVideoMode - ChangeDisplaySettings - success\n");
+ }
+ else
+ {
+  SDL_DisplayMode DM;
+  SDL_GetCurrentDisplayMode(0, &DM);
+  printf("video.cpp: Video_WinSetVideoMode - WARNING: switch failed, current mode: %dx%d -", DM.w, DM.h);
+  switch (cds)
+  {
+   case DISP_CHANGE_BADDUALVIEW:
+    MDFN_printf(_("DISP_CHANGE_BADDUALVIEW\n"));
+    break;
+   case DISP_CHANGE_BADFLAGS:
+    MDFN_printf(_("DISP_CHANGE_BADFLAGS\n"));
+    break;
+   case DISP_CHANGE_BADMODE:
+    MDFN_printf(_("DISP_CHANGE_BADMODE\n"));
+    break;
+   case DISP_CHANGE_BADPARAM:
+    MDFN_printf(_("DISP_CHANGE_BADPARAM\n"));
+    break;
+   case DISP_CHANGE_FAILED:
+    MDFN_printf(_("DISP_CHANGE_FAILED\n"));
+    break;
+   case DISP_CHANGE_NOTUPDATED:
+    MDFN_printf(_("DISP_CHANGE_NOTUPDATED\n"));
+    break;
+   case DISP_CHANGE_RESTART:
+    MDFN_printf(_("DISP_CHANGE_RESTART\n"));
+    break;
+   default:
+    MDFN_printf(_("ChangeDisplaySettings failed\n"));
+    break;
+  }
+ }
 }
 #endif
 
@@ -1022,21 +1060,18 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   SMSurface = nullptr;
   SMSurface = new MDFN_Surface(NULL, SMRect.w, SMRect.h, SMRect.w, SMFormat);
  }
- /*
- printf("video.cpp: Video_ChangeResolution - SMSurface: Game resolution:   %dx%d\n",current_game_resolution_w,current_game_resolution_h);
- printf("video.cpp: Video_ChangeResolution - SMSurface: Screen resolution: %dx%d\n",screen_w,screen_h);
- printf("video.cpp: Video_ChangeResolution - SMSurface: x_scale:%d, y_scale:%d\n",sr_x_scale,sr_y_scale);
- printf("video.cpp: Video_ChangeResolution - SMSurface: w: %d, h: %d\n",w,h);
- printf("video.cpp: Video_ChangeResolution - SMSurface: SMRect w %d, h %d, x %d, y %d\n",SMRect.w, SMRect.h, SMRect.x,SMRect.y);
- printf("video.cpp: Video_ChangeResolution - SMSurface: SMDRect w %d, h %d, x %d, y %d\n",SMDRect.w, SMDRect.h, SMDRect.x,SMDRect.y);
- */
-
+ 
  // game display target
- screen_dest_rect.x = 0;
- screen_dest_rect.y = 0;
- screen_dest_rect.w = video_settings.xres;
- screen_dest_rect.h = video_settings.yres;
-
+ GenerateFullscreenDestRect();
+ /*
+ printf("video.cpp: Video_ChangeResolution - Game resolution:   %dx%d\n",current_game_resolution_w,current_game_resolution_h);
+ printf("video.cpp: Video_ChangeResolution - Screen resolution: %dx%d\n",screen_w,screen_h);
+ printf("video.cpp: Video_ChangeResolution - screen_dest_rect: w %d, h %d, x %d, y %d\n",screen_dest_rect.w, screen_dest_rect.h, screen_dest_rect.x, screen_dest_rect.y);
+ printf("video.cpp: Video_ChangeResolution - x_scale:%d, y_scale:%d\n",sr_x_scale,sr_y_scale);
+ printf("video.cpp: Video_ChangeResolution - w: %d, h: %d\n",w,h);
+ printf("video.cpp: Video_ChangeResolution - SMRect w %d, h %d, x %d, y %d\n",SMRect.w, SMRect.h, SMRect.x,SMRect.y);
+ printf("video.cpp: Video_ChangeResolution - SMDRect w %d, h %d, x %d, y %d\n",SMDRect.w, SMDRect.h, SMDRect.x,SMDRect.y);
+ */
  // useless ???
  exs = sr_x_scale;
  exs = sr_y_scale;

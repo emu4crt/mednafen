@@ -187,6 +187,7 @@ static const MDFNSetting GlobalVideoSettings[] =
 				MDFNST_BOOL, "1" },
 
  { "video.disable_composition", MDFNSF_NOFLAGS, gettext_noop("Attempt to disable desktop composition."), gettext_noop("Currently, this setting only has an effect on Windows Vista and Windows 7(and probably the equivalent server versions as well)."), MDFNST_BOOL, "1" },
+ { "video.hide_desktop", MDFNSF_NOFLAGS, gettext_noop("Hide Windows desktop."), gettext_noop("Hide Windows desktop to prevent subtle appearence during resolution switch."), MDFNST_BOOL, "0" },
  
 };
 
@@ -495,7 +496,10 @@ LIBTYPE dlp;  // switchres object
 srAPI* swres; // switchres object
 int sr_x_scale = 1;
 int sr_y_scale = 1;
-
+#ifdef WIN32
+static SDL_Window* window_mask = NULL;
+static SDL_Renderer* renderer_mask = NULL;
+#endif
 
 static INLINE void MarkNeedBBClear(void)
 {
@@ -534,7 +538,6 @@ static void SyncCleanup(void)
 
 void Video_Kill(void)
 {
- printf("video.cpp: Video_kill - start...\n");
  SyncCleanup();
 
  if(window)
@@ -549,6 +552,17 @@ void Video_Kill(void)
   SDL_DestroyWindow(window);
   window = nullptr;
  }
+// SLK - delete mask window, desktop should be back!
+#ifdef WIN32
+ if(window_mask)
+ {
+  MDFNI_printf(_("Windows Desktop: Visible\n"));
+  SDL_DestroyRenderer(renderer_mask);
+  SDL_DestroyWindow(window_mask);
+  window_mask = nullptr;
+ }
+#endif
+
  //
  //
  //
@@ -928,7 +942,6 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
  if(resolution_switch_setting == RES_SUPER || resolution_switch_setting == RES_SWITCHRES_SUPER)
  {
   printf("video.cpp: Video_ChangeResolution - Use SUPER resolution\n");
-  //if(h == video_settings.yres / sr_y_scale ) return; // No change required
   w = 2560;
   sr_x_scale = floor(w / current_game_resolution_w);
  }
@@ -937,7 +950,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   sr_x_scale = 1;
  }
 
- printf("video.cpp: Video_ChangeResolution - video_settings.fullscreen: %d\n",video_settings.fullscreen);
+ //printf("video.cpp: Video_ChangeResolution - video_settings.fullscreen: %d\n",video_settings.fullscreen);
  if(video_settings.fullscreen == 0)
  {
   // WINDOW
@@ -957,7 +970,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   // FULLSCREEN
   if(use_switchres)
   {
-   printf("video.cpp: Video_ChangeResolution using SWITCHRES FULLSCREEN - Video mode: FULLSCREEN - %dx%d\n",w,h);
+   printf("video.cpp: Video_ChangeResolution using SWITCHRES FULLSCREEN - Video mode: %dx%d\n",w,h);
    
    #ifdef WIN32  // Aouch! About limiting garbage display during switch...
    ogl_blitter->SetViewport(1, 1);
@@ -969,7 +982,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
 
    //printf("video.cpp: Video_ChangeResolution - sr_switch_to_mode call: %dx%d@%f\n",w,h,vfreq);
    ret = swres->sr_switch_to_mode(w, h, vfreq, 0, &swres_result); 
-   printf("video.cpp: Video_ChangeResolution - sr_switch_to_mode return: %u\n", ret);
+   // printf("video.cpp: Video_ChangeResolution - sr_switch_to_mode return: %u\n", ret);
 
    video_settings.xres = swres_result.width;
    video_settings.yres = swres_result.height;
@@ -1054,7 +1067,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
 
  if(SMSurface)
  {
-  printf("video.cpp: Video_ChangeResolution - SMSurface: reset\n");
+  //printf("video.cpp: Video_ChangeResolution - SMSurface: reset\n");
   MDFN_PixelFormat SMFormat = SMSurface->format;
   delete SMSurface;
   SMSurface = nullptr;
@@ -1082,6 +1095,53 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
 }
 // SLK - end
 
+// SLK
+#ifdef WIN32
+static void Video_WinHideDesktopInit(void)
+{
+ MDFNI_printf(_("Windows Desktop: Hidden\n"));
+ 
+ SDL_DisplayMode dm;
+ if (SDL_GetDesktopDisplayMode(0, &dm) != 0) 
+  printf("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+
+ //Uint32 flags = SDL_WINDOW_BORDERLESS | SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_SKIP_TASKBAR;
+ Uint32 flags = SDL_WINDOW_MINIMIZED | SDL_WINDOW_BORDERLESS;
+ window_mask = SDL_CreateWindow("Mednafen_Hide_Desktop", 0, 0, dm.w, dm.h, flags);
+
+ if(!window_mask)
+  printf("ERROR: unable to hide desktop: %s\n",SDL_GetError());
+ 
+ renderer_mask = SDL_CreateRenderer(window_mask, -1, SDL_RENDERER_ACCELERATED);
+ // Select the color for drawing. It is set to red here.
+ SDL_SetRenderDrawColor(renderer_mask, 255, 0, 0, 255);
+
+ // Clear the entire screen to our selected color.
+ SDL_RenderClear(renderer_mask);
+
+ // Up until now everything was drawn behind the scenes.
+ // This will show the new, red contents of the window.
+ 
+ SDL_MaximizeWindow(window_mask);
+ 
+ SDL_RenderPresent(renderer_mask);
+ 
+ if(window)
+  SDL_RaiseWindow(window);
+}
+
+
+static void Video_WinHideDesktopKill(void)
+{
+ MDFNI_printf(_("Windows Desktop: Visible\n"));
+ SDL_DestroyRenderer(renderer_mask);
+ SDL_DestroyWindow(window_mask);
+ window_mask = nullptr;
+}
+#endif
+// SLK end
+
+
 void Video_Sync(MDFNGI *gi)
 {
  MDFNI_printf(_("Initializing video...\n"));
@@ -1092,8 +1152,6 @@ void Video_Sync(MDFNGI *gi)
  //
  SyncCleanup();
  //Time::SleepMS(1000);
-
-
 
  VideoGI = gi;
  rotated = gi->rotated;
@@ -1120,6 +1178,25 @@ void Video_Sync(MDFNGI *gi)
    }
   }
  }
+ // SLK - Hide Desktop
+ if(MDFN_GetSettingB("video.hide_desktop") && resolution_switch_setting)
+ {
+   printf("  Hide Desktop option: On\n");
+   if(video_settings.fullscreen)
+   {
+    Video_WinHideDesktopInit();
+   }
+   else
+   {
+    Video_WinHideDesktopKill();
+   }
+ }
+ else
+ {
+   printf("  Hide Desktop option: Off\n");
+ }
+ 
+ // SLK - end
  #endif
 
  if(!getenv("__GL_SYNC_TO_VBLANK") || weset_glstvb)
@@ -1184,9 +1261,9 @@ void Video_Sync(MDFNGI *gi)
  video_settings.shader_str = MDFN_GetSettingS(snp + "shader");
  
  // SLK - set video settings - Init some settings & disable some options in conflict with native resolution
- if(resolution_switch_setting > 0){
+ if(resolution_switch_setting){
   // Enable dynamic output resolution switch
-  printf("Initializing using video mode: %dx%dx%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+  printf("  Game video mode: %dx%dx%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
   
   // Store current game video mode
   current_game_resolution_h = resolution_to_change_h;
@@ -1371,7 +1448,7 @@ void Video_Sync(MDFNGI *gi)
    wcx = wx + ww / 2;
    wcy = wy + wh / 2;
    
-   printf("video.cpp: Video_Sync - SDL_GetNumVideoDisplays\n");
+   //printf("video.cpp: Video_Sync - SDL_GetNumVideoDisplays\n");
    if((num_displays = SDL_GetNumVideoDisplays()) < 0)
    {
     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetNumVideoDisplays() failed: %s"), SDL_GetError());
@@ -1394,13 +1471,13 @@ void Video_Sync(MDFNGI *gi)
     DIndexModeBounds z;
 
     z.dindex = d;
-    printf("video.cpp: Video_Sync - SDL_GetCurrentDisplayMode\n");
+    //printf("video.cpp: Video_Sync - SDL_GetCurrentDisplayMode\n");
     if(SDL_GetCurrentDisplayMode(d, &z.mode) < 0)
     {
      MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetCurrentDisplayMode() failed: %s"), SDL_GetError());
      goto TryWindowed;
     }
-    printf("video.cpp: Video_Sync - SDL_GetDisplayBounds\n");
+    //printf("video.cpp: Video_Sync - SDL_GetDisplayBounds\n");
     if(SDL_GetDisplayBounds(d, &z.bounds) < 0)
     {
      MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_DisplayBounds() failed: %s"), SDL_GetError());
@@ -1452,13 +1529,13 @@ void Video_Sync(MDFNGI *gi)
     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetDisplayBounds() failed: %s"), SDL_GetError());
     goto TryWindowed;
    }
-   printf("video.cpp: Video_Sync - SDL_SetWindowPosition & SDL_SetWindowSize\n");
+   //printf("video.cpp: Video_Sync - SDL_SetWindowPosition & SDL_SetWindowSize\n");
    SDL_SetWindowPosition(window, dbr.x, dbr.y);
    SDL_SetWindowSize(window, dbr.w, dbr.h);
   }
   //
   //
-  printf("video.cpp: Video_Sync - SDL_GetCurrentDisplayMode\n");
+  //printf("video.cpp: Video_Sync - SDL_GetCurrentDisplayMode\n");
   if(SDL_GetCurrentDisplayMode(dindex, &trymode) < 0)
   {
    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetCurrentDisplayMode() failed: %s"), SDL_GetError());
@@ -1474,7 +1551,7 @@ void Video_Sync(MDFNGI *gi)
   // SLK SR - TODO - move to a function ?
   if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_SWITCHRES_SUPER)
   {
-   printf("video.cpp: Video_Sync - Try SR instead of SDL to switch\n");
+   //printf("video.cpp: Video_Sync - Try SR instead of SDL to switch\n");
    // SDL_SetWindowSize(window, resolution_to_change_w, resolution_to_change_h);
    int ret;
    sr_mode swres_result;
@@ -1484,11 +1561,11 @@ void Video_Sync(MDFNGI *gi)
    //ret = swres->sr_add_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
    //printf("video.cpp: Video_SwitchResInit - sr_add_mode return: %d\n", ret);
    #endif
-   printf("video.cpp: Video_Sync - sr_switch_to_mode call: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h, resolution_to_change_vfreq);
+   //printf("video.cpp: Video_Sync - sr_switch_to_mode call: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h, resolution_to_change_vfreq);
    ret = swres->sr_switch_to_mode(resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq, 0, &swres_result);
-   printf("video.cpp: Video_Sync - sr_switch_to_mode return: %u\n", ret);
+   //printf("video.cpp: Video_Sync - sr_switch_to_mode return: %u\n", ret);
 
-   printf("video.cpp: Video_Sync - SWITCHRES result %dx%d - x=%d y=%d\n", swres_result.width, swres_result.height, swres_result.x_scale, swres_result.y_scale);
+   printf("  Switchres result: %dx%d - Xscale=%d, Yscale=%d\n", swres_result.width, swres_result.height, swres_result.x_scale, swres_result.y_scale);
 
    mode.w = swres_result.width;
    mode.h = swres_result.height;
@@ -1501,15 +1578,15 @@ void Video_Sync(MDFNGI *gi)
    video_settings.xscale = sr_x_scale ;
    video_settings.yscale = sr_y_scale ;
 
-   printf("video.cpp: Video_Sync - SDL_SetWindowSize %dx%d\n", video_settings.xres , video_settings.yres);
+   //printf("video.cpp: Video_Sync - SDL_SetWindowSize %dx%d\n", video_settings.xres , video_settings.yres);
    SDL_SetWindowSize(window, video_settings.xres , video_settings.yres);
     
-   printf("video.cpp: Video_Sync - SDL_SetWindowDisplayMode FULLSCREEN\n");
+   //printf("video.cpp: Video_Sync - SDL_SetWindowDisplayMode FULLSCREEN\n");
     
    #ifdef WIN32
    if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0) 
    #else
-   printf("video.cpp: Video_Sync - Call SDL_SetWindowDisplayMode (SDL_WINDOW_FULLSCREEN_DESKTOP)\n");
+   //printf("video.cpp: Video_Sync - Call SDL_SetWindowDisplayMode (SDL_WINDOW_FULLSCREEN_DESKTOP)\n");
    if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP) < 0)
    #endif
    {
@@ -1519,7 +1596,7 @@ void Video_Sync(MDFNGI *gi)
   }
   else 
   {
-   printf("video.cpp: Video_Sync - SDL_GetClosestDisplayMode\n");
+   //printf("video.cpp: Video_Sync - SDL_GetClosestDisplayMode\n");
    if(!SDL_GetClosestDisplayMode(dindex, &trymode, &mode))
    {
     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because no modes big enough for %dx%d."), trymode.w, trymode.h);
@@ -1536,7 +1613,7 @@ void Video_Sync(MDFNGI *gi)
    int old_mousey = 0;
    SDL_GetGlobalMouseState(&old_mousex, &old_mousey);
    #endif
-   printf("video.cpp: Video_Sync - Call SDL_SetWindowFullscreen (SDL_WINDOW_FULLSCREEN)\n");
+   // printf("video.cpp: Video_Sync - Call SDL_SetWindowFullscreen (SDL_WINDOW_FULLSCREEN)\n");
    if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
    {
     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
@@ -1758,6 +1835,7 @@ void Video_Sync(MDFNGI *gi)
 
 void Video_Init(void)
 {
+
  winpos_x = SDL_WINDOWPOS_CENTERED; //MDFN_GetSettingI("video.window.x");
  winpos_y = SDL_WINDOWPOS_CENTERED; //MDFN_GetSettingI("video.window.y");
  winpos_applied = false;
@@ -1783,6 +1861,7 @@ void Video_Init(void)
   throw MDFN_Error(0, _("SDL_CreateWindow() failed: %s\n"), SDL_GetError());
  //
  SDL_SetWindowIcon(window, IconSurface);
+
 }
 
 static uint32 howlong = 0;
@@ -2233,9 +2312,11 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
         // SLK - printf("    Vertical centering OFF (psx)\n");
         sub_dest_rect.h = sub_src_rect.h * (screen_dest_rect.h) / src_rect.h;
        }
-       // SLK - printf("      Output - SLK sub_src_rect:    %dx%d %d,%d\n",sub_src_rect.w,sub_src_rect.h,sub_src_rect.x,sub_src_rect.y);
-       // SLK - printf("      Output - SLK sub_dest_rect:   %dx%d %d,%d\n",sub_dest_rect.w,sub_dest_rect.h,sub_dest_rect.x,sub_dest_rect.y);
-       // SLK - printf("      Output - SLK sub_screen_rect: %dx%d %d,%d\n",screen_dest_rect.w,screen_dest_rect.h,screen_dest_rect.x,screen_dest_rect.y);
+       /*
+       SLK - printf("      Output - SLK sub_src_rect:    %dx%d %d,%d\n",sub_src_rect.w,sub_src_rect.h,sub_src_rect.x,sub_src_rect.y);
+       SLK - printf("      Output - SLK sub_dest_rect:   %dx%d %d,%d\n",sub_dest_rect.w,sub_dest_rect.h,sub_dest_rect.x,sub_dest_rect.y);
+       SLK - printf("      Output - SLK sub_screen_rect: %dx%d %d,%d\n",screen_dest_rect.w,screen_dest_rect.h,screen_dest_rect.x,screen_dest_rect.y);
+       */
       }
       else
       {

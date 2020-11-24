@@ -2453,13 +2453,13 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 
  try
  {
-        if(LoadGame(force_module_arg, needie))
-        {
-         NeedVideoSync = 1;	// Set to 1 before creating game thread.
-	 //
-	 //
-	 const uint64 vt_affinity = MDFN_GetSettingUI("affinity.video");
-         const uint64 gt_affinity = MDFN_GetSettingUI("affinity.emu");
+  if(LoadGame(force_module_arg, needie))
+  {
+   NeedVideoSync = 1;	// Set to 1 before creating game thread.
+	  //
+	  //
+	  const uint64 vt_affinity = MDFN_GetSettingUI("affinity.video");
+   const uint64 gt_affinity = MDFN_GetSettingUI("affinity.emu");
 
 
 	 GameThreadRun = 1;
@@ -2535,10 +2535,10 @@ try
 	 if(MDFN_LIKELY(NeedResolutionChange))
 		{
 		 NeedResolutionChange--;
-			printf("main.cpp: Gameloop - Call for resolution change\n");
+			//printf("main.cpp: Gameloop - Call for resolution change\n");
 		 Video_ChangeResolution(CurGame, resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq);
    PumpWrap();
-		 printf("main.cpp: Gameloop - End of resolution change\n");
+		 printf("main.cpp: Gameloop - End of resolution change\n\n");
 		}
 		// SLK END
 

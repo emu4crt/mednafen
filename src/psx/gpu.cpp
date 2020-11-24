@@ -139,7 +139,7 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
   
   if(prev_resolution_w != resolution_to_change_w || prev_resolution_h != resolution_to_change_h)
   {
-    if(res_change_count < 3)
+    if(res_change_count < 2)
     {
   	  res_change_count += 1;
 	    printf("PSX GPU - Startup resolution change bypass (%d).\n",res_change_count);

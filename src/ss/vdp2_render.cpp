@@ -561,12 +561,14 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 	// SLK
 	if(InterlaceMode != prev_InterlaceMode || HRes != prev_HRes)
 	{
-	  printf("VDP2 Render - Television mode changed: %d\n",V);
-	  printf("     BorderMode: %d\n",BorderMode);
-	  printf("     PAL: %d\n",PAL);
-	  printf("     InterlaceMode: %d\n",InterlaceMode);
-	  printf("     VRes: %d\n",VRes);
-	  printf("     HRes: %d\n",HRes);
+    /*
+	  printf(" Module SS: VDP2 Render - Television mode changed: %d\n",V);
+	  printf("  BorderMode: %d\n",BorderMode);
+	  printf("  PAL: %d\n",PAL);
+	  printf("  InterlaceMode: %d\n",InterlaceMode);
+	  printf("  VRes: %d\n",VRes);
+	  printf("  HRes: %d\n",HRes);
+    */
 	  prev_BorderMode = BorderMode;
 	  prev_InterlaceMode = InterlaceMode;
 	  prev_VRes = VRes;
@@ -587,7 +589,7 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 	      break;
 	  }
 	  if(InterlaceMode >= 2){resolution_to_change_h = PAL ? 576 : 480;} else {resolution_to_change_h = PAL ? 288 : 240;}
-	  printf("SS - VDP2 Render - TV mode set to %dx%d",resolution_to_change_w,resolution_to_change_h);
+	  printf(" Module SS: VDP2 TV mode set to %dx%d\n",resolution_to_change_w,resolution_to_change_h);
 	  resolution_to_change  = true; // Flag for video resolution change by VIDEO.cpp/MAIN.cpp
 	}
 	// SLK - end

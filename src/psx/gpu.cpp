@@ -136,21 +136,19 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
       resolution_to_change_h = 240;
       }
   }
-  
-  if(prev_resolution_w != resolution_to_change_w || prev_resolution_h != resolution_to_change_h)
+  if(res_change_count < 2)
   {
-    if(res_change_count < 2)
-    {
-  	  res_change_count += 1;
-	    printf("PSX GPU - Startup resolution change bypass (%d).\n",res_change_count);
-	    native_resolution_vcenter = false;  // No need Vertical centering for PSX module.
-    }
-    else
+    MDFN_printf(_("PSX startup resolution change bypass (%d).\n"),res_change_count);
+    res_change_count += 1;
+  }
+  else
+  {
+    if(prev_resolution_w != resolution_to_change_w || prev_resolution_h != resolution_to_change_h)
     {
 	    prev_resolution_w = resolution_to_change_w; // will be used in VIDEO.cpp
 	    prev_resolution_h = resolution_to_change_h;
-	    //printf("PSX - GPU register - resolution change to: %dx%d (V=%d)\n",resolution_to_change_w,resolution_to_change_h,V);
-	    resolution_to_change = true;  // will be reset in VIDEO.cpp
+	    //MDFN_printf(_("Game resolution has switched to: %dx%d (V=%d)\n"),resolution_to_change_w,resolution_to_change_h,V);
+	    resolution_to_change = true;  // will be reset in main.cpp/gameloop
     }
   }
 }
@@ -188,18 +186,21 @@ void GPU_Init(bool pal_clock_and_tv)
     DitherLUT[y][x][v] = value;
    }
 
+ // SLK
+ prev_resolution_w = resolution_to_change_w = 640;
+ native_resolution_vcenter = false;
+ resolution_to_change = false;
+ // SLK end
+
  if(HardwarePALType == false)	// NTSC clock
  {
   GPUClockRatio = 103896; // 65536 * 53693181.818 / (44100 * 768)
   hmc_to_visible = 520; 
     
   //SLK
-  resolution_to_change_w = 640;
-  resolution_to_change_h = 480;
+  prev_resolution_h = resolution_to_change_h = 480;
   resolution_to_change_vfreq = 59.94; 
-  resolution_to_change = true;
-  printf("PSX - GPU Init - NTSC mode - resolution set to: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
-  
+  // SLK end  
  }
  else	// PAL clock
  {
@@ -207,13 +208,14 @@ void GPU_Init(bool pal_clock_and_tv)
   hmc_to_visible = 560; 
   
   //SLK
-  resolution_to_change_w = 640;
-  resolution_to_change_h = 576;
+  prev_resolution_h = resolution_to_change_h = 576;
   resolution_to_change_vfreq = 50;// TODO: more accurate value ???
-  resolution_to_change = true;
-  printf("PSX - GPU Init - PAL mode - resolution set to: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
-  
+  // SLK end
  }
+
+ // SLK
+ MDFN_printf(_("Initial video mode: %dx%d@%f\n"),resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+ // SLK end
 
  memcpy(&Commands[0x00], Commands_00_1F, sizeof(Commands_00_1F));
  memcpy(&Commands[0x20], Commands_20_3F, sizeof(Commands_20_3F));

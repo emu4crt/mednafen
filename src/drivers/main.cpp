@@ -1348,7 +1348,7 @@ static int GameLoop(void *arg)
   //SLK - trap change resolution request (in first loop, current_game_resolution_w == 0)
 		if(resolution_switch_setting && resolution_to_change)
 		{
-			MDFN_printf(_("Game resolution has switched from %dx%d@%f to %dx%d@%f"),current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+			MDFN_printf(_("\nGame resolution has switched from %dx%d@%f to %dx%d@%f"),current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
 			if(current_game_resolution_w)
 			{
 				printf(" - Enable\n");

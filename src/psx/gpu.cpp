@@ -138,7 +138,7 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
   }
   if(res_change_count < 2)
   {
-    printf("Module psx: Startup resolution change bypass (%d).\n",res_change_count);
+    MDFN_printf(_("PSX startup resolution change bypass (%d).\n"),res_change_count);
     res_change_count += 1;
   }
   else
@@ -147,7 +147,7 @@ void GPU_NewDisplayMode(int V)  // SLK - identify GPU new resolution, set global
     {
 	    prev_resolution_w = resolution_to_change_w; // will be used in VIDEO.cpp
 	    prev_resolution_h = resolution_to_change_h;
-	    printf("Module psx: Game resolution has switched to: %dx%d (V=%d)\n",resolution_to_change_w,resolution_to_change_h,V);
+	    //MDFN_printf(_("Game resolution has switched to: %dx%d (V=%d)\n"),resolution_to_change_w,resolution_to_change_h,V);
 	    resolution_to_change = true;  // will be reset in main.cpp/gameloop
     }
   }
@@ -214,7 +214,7 @@ void GPU_Init(bool pal_clock_and_tv)
  }
 
  // SLK
- printf("Module psx: Initial video mode set to: %dx%d@%f\n",resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+ MDFN_printf(_("Initial video mode: %dx%d@%f\n"),resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
  // SLK end
 
  memcpy(&Commands[0x00], Commands_00_1F, sizeof(Commands_00_1F));

@@ -1348,10 +1348,10 @@ static int GameLoop(void *arg)
   //SLK - trap change resolution request (in first loop, current_game_resolution_w == 0)
 		if(resolution_switch_setting && resolution_to_change)
 		{
-			MDFN_printf(_("GameLoop: Game resolution has switched from %dx%d@%f to %dx%d@%f"),current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
+			MDFN_printf(_("Game resolution has switched from %dx%d@%f to %dx%d@%f"),current_game_resolution_w,current_game_resolution_h,current_game_resolution_vfreq,resolution_to_change_w,resolution_to_change_h,resolution_to_change_vfreq);
 			if(current_game_resolution_w)
 			{
-				printf(" - Host resolution change request: ON\n");
+				printf(" - Enable\n");
 				NeedResolutionChange++;
 			}
 			else  // occurs during startup
@@ -2398,14 +2398,20 @@ MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
 	}
 
 
-	//MDFN_Notify(MDFN_NOTICE_ERROR, _("Get video.resolution_switch\n"));
+	// SLK - Initialize Switchres lib 
+	// TODO: better move this to Video_Init?
  resolution_switch_setting = MDFN_GetSettingI("video.resolution_switch");
- printf("main.cpp: SETTINGS - video.resolution switch: %d\n",resolution_switch_setting);
+ MDFN_printf(_("Resolution switch setting: %d\n"),resolution_switch_setting);
 	if(resolution_switch_setting == RES_SWITCHRES || resolution_switch_setting == RES_SWITCHRES_SUPER)
 	{
-	 printf("main.cpp: SWITCHRES ON\n");
+	 MDFN_printf(_("Switchres: On\n"));
 		Video_SwitchResInit(); // SLK
 	}
+	else
+	{
+		MDFN_printf(_("Switchres: Off\n"));
+	}
+	// SLK
 
 	InstallSignalHandlers();
 	//
@@ -2537,7 +2543,7 @@ try
 			//printf("main.cpp: Gameloop - Call for resolution change\n");
 		 Video_ChangeResolution(CurGame, resolution_to_change_w, resolution_to_change_h, resolution_to_change_vfreq);
    PumpWrap();
-		 printf("main.cpp: Gameloop - End of resolution change\n\n");
+		 //MDFN_printf(_("Resolution change completed\n\n"));
 		}
 		// SLK END
 

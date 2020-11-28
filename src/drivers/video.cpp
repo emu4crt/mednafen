@@ -187,7 +187,7 @@ static const MDFNSetting GlobalVideoSettings[] =
 				MDFNST_BOOL, "1" },
 
  { "video.disable_composition", MDFNSF_NOFLAGS, gettext_noop("Attempt to disable desktop composition."), gettext_noop("Currently, this setting only has an effect on Windows Vista and Windows 7(and probably the equivalent server versions as well)."), MDFNST_BOOL, "1" },
- { "video.hide_desktop", MDFNSF_NOFLAGS, gettext_noop("Hide Windows desktop."), gettext_noop("Hide Windows desktop to prevent subtle appearence during resolution switch."), MDFNST_BOOL, "0" },
+ { "video.hide_desktop", MDFNSF_NOFLAGS, gettext_noop("Hide Windows desktop."), gettext_noop("Hide Windows desktop to avoid visual gliteches during resolution switch."), MDFNST_BOOL, "0" },
  
 };
 
@@ -497,9 +497,12 @@ srAPI* swres; // switchres object
 int sr_x_scale = 1;
 int sr_y_scale = 1;
 #ifdef WIN32
+// used of Windows hide option
 static SDL_Window* window_mask = NULL;
 static SDL_Renderer* renderer_mask = NULL;
+static bool use_hide_desktop = false;
 #endif
+// SLK end
 
 static INLINE void MarkNeedBBClear(void)
 {
@@ -864,7 +867,6 @@ void Video_SwitchResInit()
   CLOSELIB(dlp);
   exit(EXIT_FAILURE);
  }
- // Testing the function
  //printf("video.cpp: Video_SwitchResInit - a new switchres_manager object:\n");
  swres->init();
 
@@ -943,7 +945,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
  uint64 before = Time::MonoUS();
  
 
- MDFN_printf(_("Change Resolution: Game video mode: %dx%d@%f - (option: %d)\n"),w,h,vfreq,resolution_switch_setting);
+ //MDFN_printf(_("Game video mode: %dx%d@%f - (option: %d)\n"),w,h,vfreq,resolution_switch_setting);
  MDFN_indent(1);
  MarkNeedBBClear();
 
@@ -958,9 +960,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   sr_x_scale = floor(w / current_game_resolution_w);
  }
  else
- {
   sr_x_scale = 1;
- }
 
  MDFN_printf(_("Fullscreen: %s\n"), (video_settings.fullscreen ? _("On") : _("Off")) );
  if(video_settings.fullscreen == 0)
@@ -984,10 +984,12 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
   {
    MDFN_printf(_("Calling Switchres for: %dx%d...\n"),w,h);
    
+   /* Questionable benefits
    #ifdef WIN32  // Aouch! About limiting garbage display during switch...
    ogl_blitter->SetViewport(1, 1);
    SDL_SetWindowSize(window, 1, 1);
    #endif
+   */
 
    int ret;
    sr_mode swres_result;
@@ -1064,6 +1066,10 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
    sr_y_scale = 1;
   }
 
+  // check result resolution
+  SDL_DisplayMode DM;
+  SDL_GetCurrentDisplayMode(0, &DM);
+  MDFN_printf(_("Current video mode: %dx%d (rounded freq: %d)\n"), DM.w, DM.h,DM.refresh_rate);
  }
 
  // for OSD (state preview)
@@ -1106,7 +1112,7 @@ void Video_ChangeResolution(MDFNGI *gi, int w, int h, double vfreq)
  // Reset view port
  ogl_blitter->SetViewport(video_settings.xres, video_settings.yres);
  MDFN_indent(-1);
- MDFN_printf(_("Video mode switch completed in: %llu\n\n"), (unsigned long long)(Time::MonoUS() - before));
+ MDFN_printf(_("Video mode switch completed in: %llu\n"), (unsigned long long)(Time::MonoUS() - before));
  MDFN_indent(-2);
 }
 // SLK - end
@@ -1142,6 +1148,8 @@ static void Video_WinHideDesktopInit(void)
  
  SDL_RenderPresent(renderer_mask);
  
+ use_hide_desktop = true;
+
  if(window)
   SDL_RaiseWindow(window);
 }
@@ -1150,6 +1158,7 @@ static void Video_WinHideDesktopInit(void)
 static void Video_WinHideDesktopKill(void)
 {
  MDFNI_printf(_("Windows Desktop: Visible\n"));
+ use_hide_desktop = false;
  SDL_DestroyRenderer(renderer_mask);
  SDL_DestroyWindow(window_mask);
  window_mask = nullptr;
